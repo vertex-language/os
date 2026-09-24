@@ -48,14 +48,13 @@ public struct StandardOutput: io.Writer, io.AsyncWriter {
 
     public mutating func Write(_ bytes: borrowing [uint8]) throws {
         sys.cos_flush_stdio()
-        let out = fd
         var off = 0
         while off < bytes.count {
             var n: int64 = 0
             let left = int64(bytes.count - off)
             let at = off
             bytes.withUnsafeBytes { raw in
-                n = sys.cos_write(out, raw.baseAddress! + at, left)
+                n = sys.cos_write(fd, raw.baseAddress! + at, left)
             }
             if n >= 0 {
                 off += int(n)

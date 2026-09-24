@@ -58,19 +58,8 @@ public struct Style {
     var italic: bool
     var underline: bool
 
-    /// A plain style for text written to stdout.
-    public init() {
-        stream = .stdout
-        fg = nil
-        bg = nil
-        bold = false
-        dim = false
-        italic = false
-        underline = false
-    }
-
-    /// A plain style for text written to the stream.
-    public init(for stream: Stream) {
+    /// A plain style for text written to the stream, stdout unless said.
+    public init(for stream: Stream = .stdout) {
         self.stream = stream
         fg = nil
         bg = nil

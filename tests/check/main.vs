@@ -183,9 +183,8 @@ func testChildren() async {
         let child = try cmd.Spawn()
         try await child.Stdin!.Write("one\ntwo\r\nthree")
         child.Stdin!.Close()
-        var lines = child.Stdout!.Lines()
         var got: [string] = []
-        while let line = try await lines.ReadLine() {
+        for try await line in child.Stdout!.Lines() {
             got.append(line)
         }
         let status = try await child.Wait()

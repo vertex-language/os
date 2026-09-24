@@ -136,16 +136,13 @@ public struct Command {
         // stderr is drained alongside stdout, so a child that fills one
         // pipe while this reads the other does not stop.
         let errPipe = child.Stderr!
-        let errTask = Task { () async -> Drained in
-            return await drain(errPipe)
+        let errTask = Task { () async throws -> [uint8] in
+            return try await errPipe.ReadToEnd()
         }
         let stdout = try await child.Stdout!.ReadToEnd()
-        let stderr = await errTask.value
+        let stderr = try await errTask.value
         let status = try await child.Wait()
-        if stderr.Failed {
-            throw ProcessError.system(code: stderr.Code, context: "read stderr")
-        }
-        return process.Output(Status: status, Stdout: stdout, Stderr: stderr.Bytes)
+        return process.Output(Status: status, Stdout: stdout, Stderr: stderr)
     }
 
     /// Runs the child to its end with its streams as set, and returns how
@@ -181,21 +178,6 @@ public struct Command {
             out.append(k + "=" + v)
         }
         return out
-    }
-}
-
-struct Drained {
-    let Bytes: [uint8]
-    let Failed: bool
-    let Code: int32
-}
-
-func drain(_ pipe: PipeReader) async -> Drained {
-    do {
-        let bytes = try await pipe.ReadToEnd()
-        return Drained(Bytes: bytes, Failed: false, Code: 0)
-    } catch {
-        return Drained(Bytes: [], Failed: true, Code: sys.cos_last_error())
     }
 }
 

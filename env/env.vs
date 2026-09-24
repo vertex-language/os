@@ -105,17 +105,5 @@ func split(_ entry: string) -> (string, string)? {
 }
 
 func sortedByName(_ pairs: [(string, string)]) -> [(string, string)] {
-    var out = pairs
-    var i = 1
-    while i < out.count {
-        let item = out[i]
-        var j = i - 1
-        while j >= 0 && sys.Less(item.0, out[j].0) {
-            out[j + 1] = out[j]
-            j -= 1
-        }
-        out[j + 1] = item
-        i += 1
-    }
-    return out
+    return pairs.sorted { $0.0 < $1.0 }
 }

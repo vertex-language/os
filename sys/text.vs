@@ -50,44 +50,19 @@ public func Blob(_ items: [string]) -> [CChar] {
 
 // Bytes is a string's UTF-8.
 public func Bytes(_ s: string) -> [uint8] {
-    var out: [uint8] = []
-    for b in s.utf8 {
-        out.append(b)
-    }
-    return out
+    return [uint8](s.utf8)
 }
 
-// Text is bytes as a string, up to the first NUL.
+// Text is the bytes from start up to end as a string.
 public func Text(_ bytes: [uint8], from start: int, to end: int) -> string {
     if start >= end {
         return ""
     }
-    var chars: [CChar] = []
-    var i = start
-    while i < end {
-        chars.append(CChar(truncatingIfNeeded: bytes[i]))
-        i += 1
-    }
-    chars.append(0)
-    return string(cString: chars)
+    return string(decoding: bytes[start..<end], as: UTF8.self)
 }
 
 // Pollable is whether a descriptor from cos can be waited on through the
 // runtime, rather than read and waited on by blocking the thread.
 public func Pollable() -> bool {
     return cos_pollable() == 1
-}
-
-// Less orders strings by their UTF-8 bytes, which is code point order.
-public func Less(_ a: string, _ b: string) -> bool {
-    let x = Bytes(a)
-    let y = Bytes(b)
-    var i = 0
-    while i < x.count && i < y.count {
-        if x[i] != y[i] {
-            return x[i] < y[i]
-        }
-        i += 1
-    }
-    return x.count < y.count
 }

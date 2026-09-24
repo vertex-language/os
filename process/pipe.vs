@@ -62,10 +62,9 @@ public final class PipeReader: io.AsyncReader, io.Closer {
 
     /// The stream a line at a time.
     ///
-    ///     var lines = child.Stdout!.Lines()
-    ///     while let line = try await lines.ReadLine() { print(line) }
-    public func Lines() -> io.AsyncBufferedReader<PipeReader> {
-        return io.AsyncBufferedReader(self)
+    ///     for try await line in child.Stdout!.Lines() { print(line) }
+    public func Lines() -> io.AsyncLines<PipeReader> {
+        return io.AsyncLines(self)
     }
 
     /// Closes the parent's end. A child writing to it afterwards gets
