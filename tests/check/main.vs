@@ -7,6 +7,7 @@ import "os/process"
 import "os/signal"
 import "os/term"
 import "os/user"
+import "io"
 
 var failures: int32 = 0
 
@@ -182,9 +183,9 @@ func testChildren() async {
         let child = try cmd.Spawn()
         try await child.Stdin!.Write("one\ntwo\r\nthree")
         child.Stdin!.Close()
-        let lines = child.Stdout!.Lines()
+        var lines = child.Stdout!.Lines()
         var got: [string] = []
-        while let line = try await lines.Next() {
+        while let line = try await lines.ReadLine() {
             got.append(line)
         }
         let status = try await child.Wait()
@@ -226,6 +227,39 @@ func testChildren() async {
     }
 }
 
+func testIo() async {
+    do {
+        // A child's output through io: copied into memory as it arrives.
+        var cmd = process.Command("printf", ["one\ntwo\n"])
+        cmd.Stdout = .pipe
+        let child = try cmd.Spawn()
+        var pipe = child.Stdout!
+        var mem = io.Cursor()
+        let n = try await io.Copy(from: &pipe, to: &mem)
+        _ = try await child.Wait()
+        check(n == 8 && io.Text(mem.Bytes) == "one\ntwo\n", "io.Copy from a child's stdout")
+
+        // Into a child's stdin through io, and read back as text.
+        var cat = process.Command("cat")
+        cat.Stdin = .pipe
+        cat.Stdout = .pipe
+        let c = try cat.Spawn()
+        var input = c.Stdin!
+        var src = io.Cursor(io.Bytes("through cat"))
+        _ = try await io.Copy(from: &src, to: &input)
+        input.Close()
+        check(try await c.Stdout!.ReadText() == "through cat", "io.Copy into a child's stdin")
+        _ = try await c.Wait()
+
+        // print and process.Stdout interleave in order.
+        print("ok    print before process.Stdout")
+        var out = process.Stdout
+        try await io.WriteText(&out, "ok    process.Stdout after print\n")
+    } catch {
+        check(false, "io: \(error)")
+    }
+}
+
 func testSignalListen() async {
     do {
         let l = try signal.Listen(.hangup)
@@ -259,6 +293,7 @@ func main() async -> int32 {
     testTerm()
     testCurrentProcess()
     await testChildren()
+    await testIo()
     await testSignalListen()
     await testSignalWait()
     if failures > 0 {

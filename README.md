@@ -145,8 +145,8 @@ cmd.Stdout = .pipe
 cmd.Stderr = .inherit
 
 let child = try cmd.Spawn()
-let lines = child.Stdout!.Lines()
-while let line = try await lines.Next() { print(line) }
+var lines = child.Stdout!.Lines()                    // an io.AsyncBufferedReader
+while let line = try await lines.ReadLine() { print(line) }
 let status = try await child.Wait()          // .exited(code) | .signaled(signal)
 
 child.Terminate()                // SIGTERM, or CTRL_BREAK on Windows
@@ -163,8 +163,9 @@ let git = process.Find("git")    // string?: a PATH lookup, like `which` (PATHEX
 | `Command` | `Program`, `Args`, `Dir: string?`, `Env: [string: string]`, `ClearEnv`, `Stdin`/`Stdout`/`Stderr: Stdio`, `Spawn()`, `Output() async`, `Status() async` |
 | `Stdio` | `.inherit` (default), `.pipe`, `.null`, `.file(string)` |
 | `Child` | `ID`, `Stdin: PipeWriter?`, `Stdout`/`Stderr: PipeReader?`, `Wait() async`, `TryWait()`, `Terminate()`, `Kill()`, `Signal(_:)` |
-| `PipeReader` | `Read(into:) async`, `ReadAll() async`, `ReadText() async`, `Lines()` (a `LineReader` with `Next() async -> string?`), `Close()` |
-| `PipeWriter` | `Write(_:) async`, `Close()`, which is how the child sees EOF |
+| `PipeReader` | an `io.AsyncReader` and `io.Closer`: `Read(into:) async`, `ReadToEnd(limit:) async`, `ReadText(limit:) async`, `Lines()` (an `io.AsyncBufferedReader`), `Close()` |
+| `PipeWriter` | an `io.AsyncWriter` and `io.Closer`: `Write(_:) async` (bytes or text), `Close()`, which is how the child sees EOF |
+| `Stdin` / `Stdout` / `Stderr` | this process's standard streams: an `io.Reader`, and `io.Writer`s that write out what `print` buffered first, so output stays in order. Each meets the async protocol too |
 | `ExitStatus` | `.exited(int32)`, `.signaled(signal.Kind)`, `Success`, `Code: int32?` |
 | `Output` | `Status`, `Stdout: [uint8]`, `Stderr: [uint8]`, `StdoutText`, `StderrText` |
 | `ProcessError` | `.notFound(program)`, `.permissionDenied(program)`, `.failed(status, stderr)` (from `Run`), `.system(code, context)` |
@@ -173,9 +174,9 @@ let git = process.Find("git")    // string?: a PATH lookup, like `which` (PATHEX
 
 - Paths are `string` rather than `fs.Path`, so `os` doesn't depend on
   another repository yet.
-- `Lines()` returns a `LineReader` with `Next()`, not an `AsyncSequence`,
-  because core doesn't declare `AsyncSequence` or `for await` yet. It
-  becomes an `AsyncSequence` once they exist.
+- `Lines()` returns an `io.AsyncBufferedReader`, read with `ReadLine()`,
+  not an `AsyncSequence`, because core doesn't declare `AsyncSequence` or
+  `for await` yet.
 
 **Implementation.**
 
@@ -196,9 +197,9 @@ let git = process.Find("git")    // string?: a PATH lookup, like `which` (PATHEX
   with the `CommandLineToArgvW` rules, so an argument array reaches the
   child unchanged.
 
-When `io` lands, `PipeReader` and `PipeWriter` conform to
-`io.AsyncReader` and `io.AsyncWriter`. `io.Copy(from: child.Stdout!, to:
-file)` then works without code specific to processes.
+`PipeReader` and `PipeWriter` conform to `io.AsyncReader` and
+`io.AsyncWriter`, so `io.Copy(from: &pipe, to: &file)` works without code
+specific to processes.
 
 ---
 

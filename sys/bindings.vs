@@ -68,6 +68,10 @@ public func cos_release_child(_ pid: int64, _ exitFd: int32)
 public func cos_read(_ fd: int32, _ buf: UnsafeMutableRawPointer, _ count: int64) -> int64
 @_silgen_name("cos_write")
 public func cos_write(_ fd: int32, _ buf: UnsafeRawPointer, _ count: int64) -> int64
+@_silgen_name("cos_flush_stdio")
+public func cos_flush_stdio()
+@_silgen_name("cos_wait_fd")
+public func cos_wait_fd(_ fd: int32, _ events: int32) -> int32
 @_silgen_name("cos_close")
 public func cos_close(_ fd: int32) -> int32
 

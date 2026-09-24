@@ -894,6 +894,26 @@ int64_t cos_read(int32_t fd, void* buf, int64_t count) {
 #endif
 }
 
+void cos_flush_stdio(void) {
+    fflush(stdout);
+    fflush(stderr);
+}
+
+int32_t cos_wait_fd(int32_t fd, int32_t events) {
+#if defined(_WIN32)
+    (void)fd;
+    (void)events;
+    return 1;  // Windows' standard handles block; there is nothing to wait for.
+#else
+    struct pollfd p = { fd, (short)(events == 2 ? POLLOUT : POLLIN), 0 };
+    for (;;) {
+        int n = poll(&p, 1, -1);
+        if (n >= 0) return 1;
+        if (errno != EINTR) return mapError(errno);
+    }
+#endif
+}
+
 int64_t cos_write(int32_t fd, const void* buf, int64_t count) {
 #if defined(_WIN32)
     unsigned n = count > 0x7fffffff ? 0x7fffffff : (unsigned)count;

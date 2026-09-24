@@ -146,6 +146,13 @@ void    cos_release_child(int64_t pid, int32_t exit_fd);
 // Non-blocking where cos_pollable is 1: COS_ERR_WOULD_BLOCK when nothing
 // is ready. 0 from a read is the end of the stream.
 int64_t cos_read(int32_t fd, void* buf, int64_t count);
+// Writes out what C stdio holds for stdout and stderr -- where print's
+// output waits -- so that a write straight to fd 1 or 2 comes after it.
+void    cos_flush_stdio(void);
+// Waits, holding the thread, until fd can be read (events 1) or written
+// (2): for the synchronous standard streams, whose waiting is the point,
+// where someone has made the descriptor non-blocking. 1 ready, or an error.
+int32_t cos_wait_fd(int32_t fd, int32_t events);
 int64_t cos_write(int32_t fd, const void* buf, int64_t count);
 int32_t cos_close(int32_t fd);
 

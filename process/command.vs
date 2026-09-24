@@ -139,7 +139,7 @@ public struct Command {
         let errTask = Task { () async -> Drained in
             return await drain(errPipe)
         }
-        let stdout = try await child.Stdout!.ReadAll()
+        let stdout = try await child.Stdout!.ReadToEnd()
         let stderr = await errTask.value
         let status = try await child.Wait()
         if stderr.Failed {
@@ -192,7 +192,7 @@ struct Drained {
 
 func drain(_ pipe: PipeReader) async -> Drained {
     do {
-        let bytes = try await pipe.ReadAll()
+        let bytes = try await pipe.ReadToEnd()
         return Drained(Bytes: bytes, Failed: false, Code: 0)
     } catch {
         return Drained(Bytes: [], Failed: true, Code: sys.cos_last_error())
