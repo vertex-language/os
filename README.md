@@ -443,4 +443,4 @@ vsc run check
 
 ## License
 
-See [LICENSE](LICENSE).
+[MIT](LICENSE)
