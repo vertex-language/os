@@ -1,20 +1,29 @@
 # os
 
-[![package: stdlib](https://img.shields.io/badge/package-stdlib-f4f4f5?style=flat-square&labelColor=e4e4e7&color=18181b)](https://github.com/vertex-language)
+[![package: vs-package](https://img.shields.io/badge/package-vs--package-f4f4f5?style=flat-square&labelColor=e4e4e7&color=18181b)](https://github.com/vertex-language)
 [![packages: env | process | signal | user | host | term | pty](https://img.shields.io/badge/packages-env%20%7C%20process%20%7C%20signal%20%7C%20user%20%7C%20host%20%7C%20term%20%7C%20pty-f4f4f5?style=flat-square&labelColor=e4e4e7&color=18181b)](https://github.com/vertex-language/os)
 [![status: macOS tested](https://img.shields.io/badge/status-macOS%20tested-f4f4f5?style=flat-square&labelColor=e4e4e7&color=18181b)](https://github.com/vertex-language/os)
 
-The running process, its environment, and the machine it runs on, for the
-Vertex programming language.
+Operating system interfaces: environment variables, processes, signals, user profiles, host diagnostics, and terminal control.
 
 > **Status.** `env`, `process`, `signal`, `user`, `host` and `term` are
-> implemented, and `tests/check` passes on macOS (aarch64). The Windows and
-> Android branches of `cos` are written, but they haven't been compiled yet
-> (see [Platforms](#platforms)). `os/pty` isn't started.
->
-> Where the shipped API differs from the original design because the
-> compiler can't express something yet, the section says so. Each gap is
-> tracked in `vsc_TODO.md`.
+> implemented, and `tests/check` passes on macOS (aarch64).
+
+---
+
+## Quick Start
+
+Run any entry point with:
+
+```bash
+vsc run main.vs
+```
+
+Or run the test suite:
+
+```bash
+vsc run check
+```
 
 ---
 
@@ -395,8 +404,7 @@ runtime has worker threads on Windows.
 ## Build and test
 
 ```bash
-vsc build
-./.build/vsc/debug/check
+vsc run check
 ```
 
 ## What it replaced
