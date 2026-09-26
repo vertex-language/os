@@ -7,7 +7,7 @@
 Operating system interfaces: environment variables, processes, signals, user profiles, host diagnostics, and terminal control.
 
 > **Status.** `env`, `process`, `signal`, `user`, `host` and `term` are
-> implemented, and `tests/check` passes on macOS (aarch64).
+> implemented, and `cmd/check` passes on macOS (aarch64).
 
 ---
 
@@ -35,8 +35,9 @@ environment, and the machine it runs on.**
 Go's `os` package puts files, the environment, processes, signals and users
 in one namespace. Rust splits them into `std::env`, `std::process` and
 `std::fs`, and Vertex does the same. `fs` is its own repository already.
-`os` is a repository of small, focused packages that share one native
-bridge (`cos`).
+`os` is a repository of small, focused packages. Each has its own C++
+module for its system calls (`os.env`, `os.process`, ...), and they share
+the helpers in `os.sys`.
 
 | Package | What it is | Closest equivalents |
 | --- | --- | --- |
@@ -78,7 +79,7 @@ on. Each package below follows them.
    absent, `Require` reads a value that must be there, `Find` is a lookup
    that may fail, `Spawn` starts something, `Wait` waits for it, and
    `Close` releases it.
-8. **All native code is in `cos`.** No other package has to bind
+8. **All native code is in `os`.** No other package has to bind
    libc to get an environment variable, a CPU count or a subprocess
    again.
 
@@ -349,36 +350,28 @@ Tier 3 in the roadmap. It lands after the others.
 
 ```
 os/
-  package.vs
-  cos/                    one bridge for every os package
-    include/cos.h
-    cos.cpp               #if defined(_WIN32) / __APPLE__ / __ANDROID__
-  env/      *.vs
-  process/  *.vs
-  signal/   *.vs
-  user/     *.vs
-  host/     *.vs
-  term/     *.vs
-  sys/      bindings.vs, text.vs   internal: every @_silgen_name, and shared helpers
-  tests/check/main.vs
-  examples/run/main.vs    os-run: runs a command and reports how it ended
+  vs.mod
+  sys/      sys.cpp, sys.vs, text.vs   export module os.sys; error codes, buffers, pipes, descriptors
+  env/      env.cpp, env.vs            export module os.env;
+  host/     host.cpp, host.vs          export module os.host;
+  user/     user.cpp, user.vs          export module os.user;
+  term/     term.cpp, *.vs             export module os.term;
+  signal/   signal.cpp, signal.vs      export module os.signal;
+  process/  process.cpp                export module os.process; this process, and spawn's declarations
+            process_posix.cpp          module os.process; posix_spawn (Darwin), fork/exec (Android)
+            process_windows.cpp        module os.process; CreateProcessW
+            *.vs
+  cmd/check                            the test program
+  cmd/os-run                           runs a command and reports how it ended
 ```
 
-```swift
-.target(name: "cos", path: "cos", publicHeadersPath: "include"),
-.target(name: "os_sys",     dependencies: ["cos"], path: "sys"),
-.target(name: "os_env",     dependencies: ["os_sys"], path: "env"),
-.target(name: "os_host",    dependencies: ["os_sys"], path: "host"),
-.target(name: "os_user",    dependencies: ["os_sys", "os_env", "os_host"], path: "user"),
-.target(name: "os_term",    dependencies: ["os_sys", "os_env"], path: "term"),
-.target(name: "os_signal",  dependencies: ["os_sys"], path: "signal"),
-.target(name: "os_process", dependencies: ["os_sys", "os_env", "os_host", "os_signal"], path: "process"),
-```
-
-`cos` follows [vsc/stdlib/GUIDELINES.md](https://github.com/vertex-language/vsc/blob/main/stdlib/GUIDELINES.md):
-functions are named `cos_*`, it uses plain C types, returns negative error
-codes, and never blocks a thread. The runtime isn't extended for any of
-this. The only thing `os` needs from the runtime is `vertex_task_wait_fd`.
+Each package's C++ module is internal to it: its `.vs` files call the
+exports, and importers see only the Vertex API. Each module does
+`import os.sys;` for the shared C++, and `sys.vs` gives the Vertex side
+what the packages share (`sys.Code`, `sys.Read`, `sys.Write`, `sys.Close`,
+`sys.LastError`). The C++ uses plain types, returns negative error codes,
+and never blocks a thread. The runtime isn't extended for any of this.
+The only thing `os` needs from the runtime is `vertex_task_wait_fd`.
 
 ---
 
@@ -386,14 +379,15 @@ this. The only thing `os` needs from the runtime is `vertex_task_wait_fd`.
 
 | | macOS (aarch64) | Windows (x86_64) | Android (aarch64) |
 | --- | --- | --- | --- |
-| Built and tested | yes, `tests/check` | not compiled yet | not compiled yet |
-| Pipes and waits | parked on the executor | block the thread (`cos_pollable() == 0`) | parked on the executor |
+| Built and tested | yes, `cmd/check` | not compiled yet | not compiled yet |
+| Pipes and waits | parked on the executor | block the thread (`sys.Pollable()` is false) | parked on the executor |
 | Child exit | kqueue `EVFILT_PROC` | `WaitForSingleObject` | pidfd, or a watcher thread |
 
 `vsc build -target x86_64-windows` fails in every repository with a C++
 bridge, `fs` and `net` included, because the Windows headers aren't found.
-Until that's fixed, the Windows branch of `cos` hasn't been compiled. It
-follows the same header, and the argument quoting follows the
+Until that's fixed, the Windows code (`process_windows.cpp` and the
+`_WIN32` branches) hasn't been compiled. It follows the same exports, and
+the argument quoting follows the
 `CommandLineToArgvW` rules.
 
 On Windows, `Command.Output()` reads stdout to its end before it reads

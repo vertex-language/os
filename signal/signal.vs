@@ -16,7 +16,7 @@ public enum Kind: Equatable {
     /// Any other POSIX signal, by number. Not on Windows.
     case posix(int32)
 
-    /// cos's number for the kind, and 0 for `.posix`.
+    /// The portable number for the kind (sys.cpp's Sig), and 0 for `.posix`.
     public var Code: int32 {
         switch self {
         case .interrupt:
@@ -89,7 +89,7 @@ public final class Listener {
         while fd >= 0 {
             var n: int64 = 0
             byte.withUnsafeMutableBytes { raw in
-                n = sys.cos_read(fd, raw.baseAddress!, 1)
+                n = sys.Read(fd, raw.baseAddress!, 1)
             }
             if n == 1 {
                 return Kind.from(int32(byte[0]))
@@ -110,7 +110,7 @@ public final class Listener {
     /// for any more comes back.
     public func Close() {
         if fd >= 0 {
-            sys.cos_signal_unlisten(fd)
+            unlisten(fd)
             fd = -1
         }
     }
@@ -126,9 +126,9 @@ public func Listen(_ kinds: Kind...) throws -> Listener {
         }
         mask = mask | (1 << c)
     }
-    let fd = sys.cos_signal_listen(mask)
+    let fd = listen(mask)
     if fd < 0 {
-        throw SignalError.system(code: sys.cos_last_error())
+        throw SignalError.system(code: sys.LastError())
     }
     return Listener(fd)
 }
@@ -147,9 +147,9 @@ public func Wait(_ kinds: Kind...) async throws -> Kind {
         }
         mask = mask | (1 << c)
     }
-    let fd = sys.cos_signal_listen(mask)
+    let fd = listen(mask)
     if fd < 0 {
-        throw SignalError.system(code: sys.cos_last_error())
+        throw SignalError.system(code: sys.LastError())
     }
     let l = Listener(fd)
     defer {

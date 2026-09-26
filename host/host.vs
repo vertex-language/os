@@ -45,28 +45,28 @@ public struct MemoryInfo {
 /// The machine's host name.
 public func Name() -> string {
     return sys.Fill { buf, max in
-        return sys.cos_hostname(buf, max)
+        return hostName(buf, max)
     }.Text ?? ""
 }
 
 /// The operating system and its version.
 public var OS: OSInfo {
     let version = sys.Fill { buf, max in
-        return sys.cos_os_version(buf, max)
+        return osVersion(buf, max)
     }.Text ?? ""
     return OSInfo(Kind: kind(), Version: version)
 }
 
 /// The processor architecture the program was built for.
 public var Arch: Architecture {
-    return sys.cos_arch() == 1 ? .aarch64 : .x86_64
+    return archKind() == ArchCode.aarch64 ? .aarch64 : .x86_64
 }
 
 /// How many processors the machine has.
 public func CPUs() -> CPUInfo {
     var out = [int32](repeating: 0, count: 3)
     out.withUnsafeMutableBufferPointer { p in
-        sys.cos_cpus(p.baseAddress!)
+        cpuCounts(p.baseAddress!)
     }
     let logical = out[0] > 0 ? int(out[0]) : 1
     return CPUInfo(Logical: logical, Performance: int(out[1]), Efficiency: int(out[2]))
@@ -76,28 +76,28 @@ public func CPUs() -> CPUInfo {
 public func Memory() -> MemoryInfo {
     var out = [int64](repeating: 0, count: 2)
     out.withUnsafeMutableBufferPointer { p in
-        sys.cos_memory(p.baseAddress!)
+        memoryBytes(p.baseAddress!)
     }
     return MemoryInfo(Total: out[0], Available: out[1])
 }
 
 /// The size of a page of memory, in bytes.
 public var PageSize: int {
-    return int(sys.cos_page_size())
+    return int(pageSize())
 }
 
 /// Nanoseconds since the machine booted, time asleep included.
 public func UptimeNanos() -> int64 {
-    return sys.cos_uptime()
+    return uptimeNanos()
 }
 
 func kind() -> OSKind {
-    switch sys.cos_os_kind() {
-    case 2:
+    switch osKind() {
+    case OSCode.windows:
         return .windows
-    case 3:
+    case OSCode.linux:
         return .linux
-    case 4:
+    case OSCode.android:
         return .android
     default:
         return .macOS

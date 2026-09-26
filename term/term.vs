@@ -47,7 +47,7 @@ public enum TermError: Error, CustomStringConvertible {
 
 /// Whether the stream is connected to a terminal rather than a file or pipe.
 public func IsTerminal(_ s: Stream) -> bool {
-    return sys.cos_is_terminal(s.fd) == 1
+    return isTerminal(s.fd) == 1
 }
 
 /// The terminal's size, or nil where the stream is not a terminal.
@@ -55,7 +55,7 @@ public func GetSize(_ s: Stream) -> Size? {
     var out = [int32](repeating: 0, count: 2)
     var rc: int32 = 0
     out.withUnsafeMutableBufferPointer { p in
-        rc = sys.cos_term_size(s.fd, p.baseAddress!)
+        rc = termSize(s.fd, p.baseAddress!)
     }
     if rc != 0 {
         return nil
@@ -72,7 +72,7 @@ public func ReadPassword(prompt: string) throws -> string {
     var n: int32 = 0
     prompt.withCString { p in
         buf.withUnsafeMutableBufferPointer { b in
-            n = sys.cos_read_password(p, b.baseAddress!, 1024)
+            n = readPassword(p, b.baseAddress!, 1024)
         }
     }
     if n == sys.Code.notATerminal {
@@ -82,7 +82,7 @@ public func ReadPassword(prompt: string) throws -> string {
         throw TermError.tooLong
     }
     if n < 0 {
-        throw TermError.system(code: sys.cos_last_error())
+        throw TermError.system(code: sys.LastError())
     }
     let text = string(cString: buf)
     var i = 0
@@ -97,15 +97,15 @@ public func ReadPassword(prompt: string) throws -> string {
 /// from keys -- for as long as `body` runs, and puts it back after, however
 /// `body` ends.
 public func Raw(_ s: Stream, _ body: () throws -> Void) throws {
-    let rc = sys.cos_term_raw(s.fd)
+    let rc = makeRaw(s.fd)
     if rc == sys.Code.notATerminal {
         throw TermError.notATerminal
     }
     if rc != 0 {
-        throw TermError.system(code: sys.cos_last_error())
+        throw TermError.system(code: sys.LastError())
     }
     defer {
-        _ = sys.cos_term_restore(s.fd)
+        _ = restoreMode(s.fd)
     }
     try body()
 }
@@ -130,6 +130,6 @@ public func ColorEnabled(_ s: Stream) -> bool {
         return false
     }
     // Windows consoles interpret escapes only once asked to.
-    _ = sys.cos_term_enable_ansi(s.fd)
+    _ = enableAnsi(s.fd)
     return true
 }

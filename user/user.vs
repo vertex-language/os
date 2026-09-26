@@ -8,7 +8,7 @@ import "os/host"
 /// this process.
 public func Name() -> string? {
     return sys.Fill { buf, max in
-        return sys.cos_user_name(buf, max)
+        return userName(buf, max)
     }.Text
 }
 
@@ -16,7 +16,7 @@ public func Name() -> string? {
 /// the account's home where that is not set.
 public func Home() -> string? {
     let h = sys.Fill { buf, max in
-        return sys.cos_user_home(buf, max)
+        return userHome(buf, max)
     }.Text
     if h == "" {
         return nil

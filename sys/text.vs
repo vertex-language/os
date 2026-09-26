@@ -1,6 +1,6 @@
 package sys
 
-// Filled is what a buffer-filling cos call gave back: the text, or the
+// Filled is what a buffer-filling os call gave back: the text, or the
 // negative code it failed with.
 public struct Filled {
     public let Text: string?
@@ -12,7 +12,7 @@ public struct Filled {
     }
 }
 
-// Fill calls a cos function that fills a buffer and returns the length
+// Fill calls a C++ function that fills a buffer and returns the length
 // the whole value needs, growing the buffer until it fits.
 public func Fill(_ call: (UnsafeMutablePointer<CChar>?, int32) -> int32) -> Filled {
     var size = 256
@@ -32,7 +32,7 @@ public func Fill(_ call: (UnsafeMutablePointer<CChar>?, int32) -> int32) -> Fill
     }
 }
 
-// Blob lays strings end to end, each NUL-terminated, as cos_spawn takes
+// Blob lays strings end to end, each NUL-terminated, as process.cpp's spawn takes
 // its arguments and environment.
 public func Blob(_ items: [string]) -> [CChar] {
     var out: [CChar] = []
@@ -59,10 +59,4 @@ public func Text(_ bytes: [uint8], from start: int, to end: int) -> string {
         return ""
     }
     return string(decoding: bytes[start..<end], as: UTF8.self)
-}
-
-// Pollable is whether a descriptor from cos can be waited on through the
-// runtime, rather than read and waited on by blocking the thread.
-public func Pollable() -> bool {
-    return cos_pollable() == 1
 }

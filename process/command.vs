@@ -19,13 +19,13 @@ public enum Stdio: Equatable {
     var code: int32 {
         switch self {
         case .inherit:
-            return 0
+            return StdioMode.inherit
         case .pipe:
-            return 1
+            return StdioMode.pipe
         case .null:
-            return 2
+            return StdioMode.discard
         case .file:
-            return 3
+            return StdioMode.file
         }
     }
 
@@ -103,11 +103,11 @@ public struct Command {
                         modes.withUnsafeBufferPointer { m in
                             files.withUnsafeBufferPointer { f in
                                 out.withUnsafeMutableBufferPointer { o in
-                                    rc = sys.cos_spawn(p, a.baseAddress!, int32(argv.count),
-                                                       envCount >= 0 ? e.baseAddress : nil, envCount,
-                                                       hasDir ? d : nil,
-                                                       m.baseAddress!, f.baseAddress!,
-                                                       o.baseAddress!)
+                                    rc = spawn(p, a.baseAddress!, int32(argv.count),
+                                               envCount >= 0 ? e.baseAddress : nil, envCount,
+                                               hasDir ? d : nil,
+                                               m.baseAddress!, f.baseAddress!,
+                                               o.baseAddress!)
                                 }
                             }
                         }
@@ -210,7 +210,7 @@ public final class Child {
             _ = try? self.TryWait()
         }
         if exitFd >= 0 {
-            sys.cos_release_child(ID, exitFd)
+            releaseChild(ID, exitFd)
             exitFd = -1
         }
     }
@@ -246,7 +246,7 @@ public final class Child {
     /// belong to another process.
     public func Terminate() {
         if status == nil {
-            _ = sys.cos_send_signal(ID, 2, 0)
+            _ = sendSignal(ID, signal.Kind.terminate.Code, 0)
         }
     }
 
@@ -254,7 +254,7 @@ public final class Child {
     /// Does nothing once the child has been waited for.
     public func Kill() {
         if status == nil {
-            _ = sys.cos_send_signal(ID, 5, 0)
+            _ = sendSignal(ID, killKind, 0)
         }
     }
 
@@ -267,7 +267,7 @@ public final class Child {
         if case .posix(let n) = kind {
             posix = n
         }
-        let rc = sys.cos_send_signal(ID, kind.Code, posix)
+        let rc = sendSignal(ID, kind.Code, posix)
         if rc != 0 {
             throw errorFor(rc, "signal")
         }
@@ -276,17 +276,17 @@ public final class Child {
     func poll(block: bool) throws -> ExitStatus? {
         var kind: int32 = 0
         var code: int32 = 0
-        let rc = sys.cos_try_wait(ID, exitFd, block ? 1 : 0, &kind, &code)
+        let rc = tryWait(ID, exitFd, block ? 1 : 0, &kind, &code)
         if rc < 0 {
             throw errorFor(rc, "wait")
         }
         if rc == 0 {
             return nil
         }
-        let s: ExitStatus = kind == 2 ? .signaled(code) : .exited(code)
+        let s: ExitStatus = kind == ExitKind.signaled ? .signaled(code) : .exited(code)
         status = s
         if exitFd >= 0 {
-            sys.cos_release_child(ID, exitFd)
+            releaseChild(ID, exitFd)
             exitFd = -1
         }
         return s
@@ -341,7 +341,7 @@ func Find(_ name: string, path: string) -> string? {
 func executable(_ path: string) -> bool {
     var ok: int32 = 0
     path.withCString { p in
-        ok = sys.cos_is_executable(p)
+        ok = isExecutable(p)
     }
     return ok == 1
 }

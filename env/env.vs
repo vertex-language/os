@@ -25,7 +25,7 @@ public func Get(_ name: string) -> string? {
     var out: sys.Filled = sys.Filled(Text: nil, Code: sys.Code.notFound)
     name.withCString { n in
         out = sys.Fill { buf, max in
-            return sys.cos_env_get(n, buf, max)
+            return envGet(n, buf, max)
         }
     }
     return out.Text
@@ -52,12 +52,12 @@ public func Require(_ name: string) throws -> string {
 /// when it is called.
 public func All() -> [(string, string)] {
     var out: [(string, string)] = []
-    let count = sys.cos_env_count()
+    let count = envCount()
     var i: int32 = 0
     while i < count {
         let index = i
         let entry = sys.Fill { buf, max in
-            return sys.cos_env_entry(index, buf, max)
+            return envEntry(index, buf, max)
         }
         if let text = entry.Text {
             if let pair = split(text) {
@@ -79,7 +79,7 @@ public func All() -> [(string, string)] {
 public func Set(_ name: string, _ value: string) {
     name.withCString { n in
         value.withCString { v in
-            _ = sys.cos_env_set(n, v)
+            _ = envSet(n, v)
         }
     }
 }
@@ -87,7 +87,7 @@ public func Set(_ name: string, _ value: string) {
 /// Removes the variable `name`. Not thread-safe; see `Set`.
 public func Remove(_ name: string) {
     name.withCString { n in
-        _ = sys.cos_env_remove(n)
+        _ = envRemove(n)
     }
 }
 

@@ -38,6 +38,6 @@ func errorFor(_ code: int32, _ what: string) -> ProcessError {
     case sys.Code.permission:
         return .permissionDenied(what)
     default:
-        return .system(code: sys.cos_last_error(), context: what)
+        return .system(code: sys.LastError(), context: what)
     }
 }

@@ -30,7 +30,7 @@ public final class PipeReader: io.AsyncReader, io.Closer {
             var n: int64 = 0
             let want = int64(buffer.count)
             buffer.withUnsafeMutableBytes { raw in
-                n = sys.cos_read(fd, raw.baseAddress!, want)
+                n = sys.Read(fd, raw.baseAddress!, want)
             }
             if n >= 0 {
                 return int(n)
@@ -42,7 +42,7 @@ public final class PipeReader: io.AsyncReader, io.Closer {
             if n == int64(sys.Code.interrupted) {
                 continue
             }
-            throw ProcessError.system(code: sys.cos_last_error(), context: "read pipe")
+            throw ProcessError.system(code: sys.LastError(), context: "read pipe")
         }
         return 0
     }
@@ -71,7 +71,7 @@ public final class PipeReader: io.AsyncReader, io.Closer {
     /// SIGPIPE, or EPIPE where it ignores that.
     public func Close() {
         if fd >= 0 {
-            _ = sys.cos_close(fd)
+            _ = sys.Close(fd)
             fd = -1
         }
     }
@@ -100,7 +100,7 @@ public final class PipeWriter: io.AsyncWriter, io.Closer {
             let left = int64(bytes.count - off)
             let at = off
             bytes.withUnsafeBytes { raw in
-                n = sys.cos_write(fd, raw.baseAddress! + at, left)
+                n = sys.Write(fd, raw.baseAddress! + at, left)
             }
             if n >= 0 {
                 off += int(n)
@@ -113,7 +113,7 @@ public final class PipeWriter: io.AsyncWriter, io.Closer {
             if n == int64(sys.Code.interrupted) {
                 continue
             }
-            throw ProcessError.system(code: sys.cos_last_error(), context: "write pipe")
+            throw ProcessError.system(code: sys.LastError(), context: "write pipe")
         }
     }
 
@@ -128,7 +128,7 @@ public final class PipeWriter: io.AsyncWriter, io.Closer {
     /// Closes the parent's end: the child reads the end of its stdin.
     public func Close() {
         if fd >= 0 {
-            _ = sys.cos_close(fd)
+            _ = sys.Close(fd)
             fd = -1
         }
     }

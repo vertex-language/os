@@ -17,7 +17,7 @@ public struct StandardInput: io.Reader, io.AsyncReader {
             var n: int64 = 0
             let want = int64(buffer.count)
             buffer.withUnsafeMutableBytes { raw in
-                n = sys.cos_read(0, raw.baseAddress!, want)
+                n = sys.Read(0, raw.baseAddress!, want)
             }
             if n >= 0 {
                 return int(n)
@@ -28,10 +28,10 @@ public struct StandardInput: io.Reader, io.AsyncReader {
             if n == int64(sys.Code.wouldBlock) {
                 // Someone made fd 0 non-blocking: wait for it as a
                 // blocking read would have.
-                _ = sys.cos_wait_fd(0, 1)
+                _ = sys.WaitFd(0, 1)
                 continue
             }
-            throw ProcessError.system(code: sys.cos_last_error(), context: "read stdin")
+            throw ProcessError.system(code: sys.LastError(), context: "read stdin")
         }
     }
 }
@@ -47,14 +47,14 @@ public struct StandardOutput: io.Writer, io.AsyncWriter {
     }
 
     public mutating func Write(_ bytes: borrowing [uint8]) throws {
-        sys.cos_flush_stdio()
+        sys.FlushStdio()
         var off = 0
         while off < bytes.count {
             var n: int64 = 0
             let left = int64(bytes.count - off)
             let at = off
             bytes.withUnsafeBytes { raw in
-                n = sys.cos_write(fd, raw.baseAddress! + at, left)
+                n = sys.Write(fd, raw.baseAddress! + at, left)
             }
             if n >= 0 {
                 off += int(n)
@@ -64,10 +64,10 @@ public struct StandardOutput: io.Writer, io.AsyncWriter {
                 continue
             }
             if n == int64(sys.Code.wouldBlock) {
-                _ = sys.cos_wait_fd(fd, 2)
+                _ = sys.WaitFd(fd, 2)
                 continue
             }
-            throw ProcessError.system(code: sys.cos_last_error(), context: fd == 1 ? "write stdout" : "write stderr")
+            throw ProcessError.system(code: sys.LastError(), context: fd == 1 ? "write stdout" : "write stderr")
         }
     }
 
@@ -78,7 +78,7 @@ public struct StandardOutput: io.Writer, io.AsyncWriter {
 
     /// Writes out what `print` has buffered.
     public mutating func Flush() throws {
-        sys.cos_flush_stdio()
+        sys.FlushStdio()
     }
 }
 
