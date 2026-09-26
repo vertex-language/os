@@ -1,13 +1,15 @@
 // os test suite.
 package main
 
-import "os/env"
-import "os/host"
-import "os/process"
-import "os/signal"
-import "os/term"
-import "os/user"
-import "io"
+import (
+    "io"
+    "os/env"
+    "os/host"
+    "os/process"
+    "os/signal"
+    "os/term"
+    "os/user"
+)
 
 var failures: int32 = 0
 

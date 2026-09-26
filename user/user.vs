@@ -1,8 +1,10 @@
 package user
 
-import "os/sys"
-import "os/env"
-import "os/host"
+import (
+    "os/env"
+    "os/host"
+    "os/sys"
+)
 
 /// The current user's login name, or nil where the system has none for
 /// this process.

@@ -13,16 +13,14 @@ Operating system interfaces: environment variables, processes, signals, user pro
 
 ## Quick Start
 
-Run any entry point with:
+Run tools and test suites in `cmd/` directly with `vsc run`:
 
 ```bash
-vsc run main.vs
-```
-
-Or run the test suite:
-
-```bash
+# Run the comprehensive check suite
 vsc run check
+
+# Run a process helper tool
+vsc run os-run -- echo "hello from vertex"
 ```
 
 ---

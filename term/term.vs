@@ -1,7 +1,9 @@
 package term
 
-import "os/sys"
-import "os/env"
+import (
+    "os/env"
+    "os/sys"
+)
 
 /// One of the process's standard streams.
 public enum Stream: Equatable {

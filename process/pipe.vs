@@ -1,7 +1,9 @@
 package process
 
-import "io"
-import "os/sys"
+import (
+    "io"
+    "os/sys"
+)
 
 /// The parent's end of a child's stdout or stderr: an io.AsyncReader, so
 /// io.Copy, io.ReadToEnd and io.AsyncBufferedReader take it.

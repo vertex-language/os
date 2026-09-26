@@ -1,7 +1,9 @@
 package process
 
-import "io"
-import "os/sys"
+import (
+    "io"
+    "os/sys"
+)
 
 /// This process's standard input: an io.Reader. A read waits for input,
 /// holding the thread, as reading a terminal or a pipe does; it meets

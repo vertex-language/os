@@ -1,9 +1,11 @@
 package process
 
-import "os/sys"
-import "os/env"
-import "os/host"
-import "os/signal"
+import (
+    "os/env"
+    "os/host"
+    "os/signal"
+    "os/sys"
+)
 
 /// What a child's standard stream is connected to.
 public enum Stdio: Equatable {
