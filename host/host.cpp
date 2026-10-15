@@ -14,7 +14,10 @@ module;
         #include <sys/sysctl.h>
     #else
         #include <sys/sysinfo.h>
-        #include <sys/system_properties.h>
+        #include <sys/utsname.h>
+        #if defined(__ANDROID__)
+            #include <sys/system_properties.h>
+        #endif
     #endif
 #endif
 export module os.host;
@@ -69,11 +72,16 @@ export int32_t osVersion(char* buf, int32_t max) noexcept {
     size_t n = sizeof(tmp);
     if (sysctlbyname("kern.osproductversion", tmp, &n, nullptr, 0) != 0) return mapError(errno);
     return copyOut(tmp, buf, max);
-#else
+#elif defined(__ANDROID__)
     char tmp[PROP_VALUE_MAX];
     int n = __system_property_get("ro.build.version.release", tmp);
     if (n <= 0) return Err::unsupported;
     return copyOutN(tmp, (size_t)n, buf, max);
+#else
+    // Linux: the kernel's release.
+    struct utsname u;
+    if (uname(&u) != 0) return mapError(errno);
+    return copyOut(u.release, buf, max);
 #endif
 }
 
