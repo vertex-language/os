@@ -18,6 +18,7 @@ import "os/sys"
 - `func Read(_ fd: int32, _ buf: UnsafeMutableRawPointer, _ count: int64) -> int64`: Read is non-blocking where Pollable: Code.wouldBlock when nothing is ready. 0 is the end of the stream.
 - `func Write(_ fd: int32, _ buf: UnsafeRawPointer, _ count: int64) -> int64`
 - `func Close(_ fd: int32) -> int32`
+- `func WakePipe() -> (read: int32, write: int32)?`: WakePipe is a pipe for waking a task from another thread: both ends non-blocking and close-on-exec; the task waits on `read` with `vertex_task_wait_fd`, a thread writes a byte to `write`. nil on Windows.
 - `func WaitFd(_ fd: int32, _ events: int32) -> int32`: WaitFd holds the thread until fd can be read (events 1) or written (2).
 - `func FlushStdio()`: FlushStdio writes out what C stdio holds for stdout and stderr, so that a write straight to fd 1 or 2 comes after print's output.
 - `func vertex_task_wait_fd(_ fd: int32, _ events: int32, _ timeoutNanos: int64) async -> int32`

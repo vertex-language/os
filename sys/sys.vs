@@ -45,6 +45,16 @@ public func Close(_ fd: int32) -> int32 {
     return closeFd(fd)
 }
 
+// WakePipe is a pipe for waking a task from another thread: both ends
+// non-blocking and close-on-exec. The task waits on `read` with
+// vertex_task_wait_fd; a thread writes a byte to `write`. nil where the
+// runtime can't wait on descriptors (Windows).
+public func WakePipe() -> (read: int32, write: int32)? {
+    var fds: [int32] = [-1, -1]
+    let ok = fds.withUnsafeMutableBufferPointer { makeWakePipe($0.baseAddress!) }
+    return ok ? (fds[0], fds[1]) : nil
+}
+
 // WaitFd holds the thread until fd can be read (events 1) or written (2).
 public func WaitFd(_ fd: int32, _ events: int32) -> int32 {
     return waitFd(fd, events)

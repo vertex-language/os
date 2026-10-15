@@ -126,6 +126,11 @@ export int32_t lastError() noexcept {
 // pollable is 1 where descriptors the os packages hand out can be waited
 // on through the runtime, 0 where reads and waits block the thread
 // instead (Windows).
+// makeWakePipe is a pipe with both ends close-on-exec and non-blocking:
+// one thread writes a byte to wake a task parked on the read end. Not on
+// Windows, where nothing is Pollable.
+export bool makeWakePipe(int32_t* fds) noexcept;
+
 export int32_t pollable() noexcept {
 #if defined(_WIN32)
     return 0;
@@ -157,6 +162,8 @@ export wchar_t* widen(const char* s) noexcept {
     return p;
 }
 
+export bool makeWakePipe(int32_t*) noexcept { return false; }
+
 #else
 
 // setFlags makes fd close-on-exec, and non-blocking where asked.
@@ -174,6 +181,16 @@ export bool setFlags(int32_t fd, bool nonblocking) noexcept {
 export bool makePipe(int32_t* fds, int32_t parentEnd) noexcept {
     if (pipe(fds) < 0) return false;
     if (!setFlags(fds[0], parentEnd == 0) || !setFlags(fds[1], parentEnd == 1)) {
+        ::close(fds[0]);
+        ::close(fds[1]);
+        return false;
+    }
+    return true;
+}
+
+export bool makeWakePipe(int32_t* fds) noexcept {
+    if (pipe(fds) < 0) return false;
+    if (!setFlags(fds[0], true) || !setFlags(fds[1], true)) {
         ::close(fds[0]);
         ::close(fds[1]);
         return false;
