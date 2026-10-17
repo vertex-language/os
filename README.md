@@ -6,8 +6,8 @@
 
 Operating system interfaces: environment variables, processes, signals, user profiles, host diagnostics, and terminal control.
 
-> **Status.** `env`, `process`, `signal`, `user`, `host` and `term` are
-> implemented, and `cmd/check` passes on macOS (aarch64).
+> **Status.** `env`, `process`, `signal`, `user`, `host`, `term` and `pty`
+> are implemented; `cmd/check` and `cmd/check-pty` pass on macOS (aarch64).
 
 ---
 
@@ -18,6 +18,9 @@ Run tools and test suites in `cmd/` directly with `vsc run`:
 ```bash
 # Run the comprehensive check suite
 vsc run check
+
+# Run the pseudo-terminal checks
+vsc run check-pty
 
 # Run a process helper tool
 vsc run os-run -- echo "hello from vertex"
@@ -326,21 +329,39 @@ Until `io` lands, streams are identified by `term.Stream` (`.stdin`,
 
 ## `os/pty`
 
-> Not started.
-
 ```swift
 import "os/pty"
 
-var session = try pty.Spawn(process.Command("vim", []), size: (Columns: 120, Rows: 40))
-try await session.Write("ihello\u{1b}:wq\r")
-let screen = try await session.ReadAll()
-session.Resize(Columns: 80, Rows: 24)
-let status = try await session.Wait()
+var cmd = process.Command("/bin/zsh", ["-l"])
+cmd.Env["TERM"] = "xterm-256color"
+let session = try pty.Spawn(cmd, size: pty.Size(columns: 120, rows: 40))
+try await session.Write("ls\r")                 // typed
+var buf = [uint8](repeating: 0, count: 65536)
+let n = try await session.Read(into: &buf)      // what it drew; 0 at the end
+try session.Resize(pty.Size(columns: 80, rows: 24))
+session.ForegroundName()                        // "zsh", or "vim" while it runs
+session.ForegroundDir()                         // where that is
+let status = try await session.Wait()           // a process.ExitStatus
 ```
 
-It uses `openpty` with `posix_spawn` on POSIX and ConPTY on Windows. It is
-for terminal emulators, `remote/ssh`, and tests of interactive programs.
-Tier 3 in the roadmap. It lands after the others.
+| API | Notes |
+| --- | --- |
+| `Spawn(_ command:size:) throws -> Session` | The command's `Program`, `Args`, `Dir`, `Env` and `ClearEnv`; its stdio settings are ignored (all three are the terminal). The child leads a new session with the terminal as its controlling terminal. |
+| `Session.Read(into:) async`, `ReadAll(limit:) async` | parks the task until output; 0 once every holder of the terminal has ended |
+| `Session.Write(_:) async` | bytes or text, all of it, in order |
+| `Session.Resize(_:)` | the child gets SIGWINCH |
+| `Session.Wait() async`, `TryWait()` | `process.ExitStatus` |
+| `Session.Signal(_ posix:)`, `Hangup()`, `Kill()`, `Close()` | to the child's process group; `Close` hangs the terminal up |
+| `Session.ForegroundName()`, `ForegroundDir()` | what runs in the foreground, and its working directory: a terminal's tab title, and where its new tab starts |
+| `PtyError` | `.notFound`, `.permissionDenied`, `.unsupported`, `.closed`, `.system` |
+
+It uses `posix_openpt` with `fork` and `execve` on POSIX: `posix_spawn`
+can't make the terminal a controlling one. Between the two the child only
+makes async-signal-safe calls, and a failed `exec` reports its errno through
+a close-on-exec pipe. The master is non-blocking and read through
+`vertex_task_wait_fd`; the child's exit is a kqueue `EVFILT_PROC` descriptor
+on macOS. Windows (ConPTY) isn't written: `Spawn` throws `.unsupported`.
+`terminal` (the app) and its tests use it.
 
 ---
 
@@ -359,7 +380,12 @@ os/
             process_posix.cpp          module os.process; posix_spawn (Darwin), fork/exec (Android)
             process_windows.cpp        module os.process; CreateProcessW
             *.vs
+  pty/      pty.cpp                    export module os.pty; pseudo-terminals
+            pty_posix.cpp              module os.pty; posix_openpt, fork/exec, kqueue
+            pty_windows.cpp            module os.pty; unsupported until ConPTY
+            pty.vs
   cmd/check                            the test program
+  cmd/check-pty                        os/pty's checks
   cmd/os-run                           runs a command and reports how it ended
 ```
 
@@ -414,7 +440,7 @@ vsc run check
 | --- | --- |
 | 1 | ✅ `os/env`, `os/process`, `os/host`, `os/term`, and `net/tcp`, `ui` and `remote` moved off their bindings |
 | 2 | ✅ `os/signal`, `os/user` |
-| 3 | `os/pty` |
+| 3 | ✅ `os/pty` (POSIX; ConPTY on Windows still to come) |
 
 ## Open questions
 

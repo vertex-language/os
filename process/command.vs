@@ -157,7 +157,7 @@ public struct Command {
     // resolve is Program as a path to execute: as it is where it names a
     // directory, and found on PATH -- the child's, where Env sets one --
     // where it is a bare name.
-    func resolve() -> string? {
+    package func resolve() -> string? {
         if hasSeparator(Program) {
             return Program
         }
@@ -165,7 +165,7 @@ public struct Command {
     }
 
     // environment is the child's, as NAME=value strings.
-    func environment() -> [string] {
+    package func environment() -> [string] {
         var vars: [string: string] = [:]
         if !ClearEnv {
             for (k, v) in env.All() {
